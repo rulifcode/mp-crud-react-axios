@@ -1,74 +1,19 @@
-**Lumoshive Academy Batch 3**
-* Nama: **Rulif Fadria Nirwansyah**
-* Project: **Milestone React CRUD**
+# crud-app-mp
 
-# Milestone Project – CRUD Product App
+Aplikasi CRUD produk berbasis React + Vite, menggunakan [FakeStore API](https://fakestoreapi.com) sebagai sumber data.
 
-**React.js + Axios + Fakestore API**
-
-## Deskripsi Project
-
-Project ini merupakan aplikasi **CRUD (Create, Read, Update, Delete)** untuk mengelola data produk menggunakan **React.js** dan **API dari fakestoreapi.com**.
-Aplikasi ini dibuat untuk memenuhi **Milestone Project: Membuat Aplikasi CRUD Menggunakan API dan React.js**.
-
-Aplikasi memungkinkan user untuk:
-
-* Melihat daftar produk
-* Menambahkan produk baru
-* Mengedit data produk
-* Menghapus produk
-* Melakukan pencarian produk
+🚀 **Live Demo:** [https://mp-crud-react-axios.vercel.app](https://mp-crud-react-axios.vercel.app)
 
 ---
 
-## Tujuan Project
+## Tech Stack
 
-* Memahami penggunaan **API** pada React
-* Mengimplementasikan **Axios** untuk HTTP request
-* Menerapkan **Container–Presentational Pattern**
-* Menggunakan **Stateful & Stateless Component**
-* Membuat UI yang **responsif dan user-friendly**
-
----
-
-## Fitur Aplikasi
-| Read (Menampilkan produk) 
-| Create (Tambah produk)   
-| Update (Edit produk)    
-| Delete (Hapus produk)   
-| Search produk           
-
----
-
-## Teknologi yang Digunakan
-
-* **React.js**
-* **Axios**
-* **Tailwind CSS**
-* **Fakestore API**
-  [https://fakestoreapi.com/products](https://fakestoreapi.com/products)
-
----
-
-## Arsitektur Aplikasi
-
-Project ini menggunakan **Container–Presentational Pattern**:
-
-### Container Component (Stateful)
-
-* `ProductContainer.jsx`
-  bertugas untuk:
-
-  * Mengelola state
-  * Fetch data dari API
-  * Logic CRUD
-  * Kontrol modal dan pencarian
-
-### Presentational Components (Stateless)
-
-* `ProductTable.jsx` → Menampilkan data produk
-* `ProductFormModal.jsx` → Form tambah & edit produk
-* `ProductViewModal.jsx` → Detail produk
+- **React 18** — UI library
+- **Vite** — build tool & dev server
+- **Tailwind CSS** — utility-first styling
+- **Heroicons** — icon set (outline style)
+- **Sonner** — toast notification
+- **Axios** — HTTP client
 
 ---
 
@@ -77,35 +22,124 @@ Project ini menggunakan **Container–Presentational Pattern**:
 ```
 src/
 ├── api/
-│   └── productApi.js
-│
-├── containers/
-│   └── ProductContainer.jsx
-│
+│   └── productApi.js         # Fungsi fetch ke FakeStore API (get, add, update, delete)
+├── assets/
+│   └── react.svg
 ├── components/
-│   ├── ProductTable.jsx
-│   ├── ProductFormModal.jsx
-│   └── ProductViewModal.jsx
-│
+│   ├── ProductFormModal.jsx   # Modal form untuk Add & Edit produk
+│   ├── ProductTable.jsx       # Tabel produk (presentational component)
+│   └── ProductViewModal.jsx   # Modal detail produk
+├── containers/
+│   └── ProductContainer.jsx  # Container: state UI, orkestrasi hook & komponen
+├── hooks/
+│   ├── useProductFilter.js   # Hook: filter (search + category + rating) + pagination
+│   └── useProducts.js        # Hook: fetch data + CRUD (create, update, delete)
 ├── App.jsx
-├── main.jsx
-└── index.css
+├── App.css
+├── index.css
+└── main.jsx
 ```
 
 ---
 
-## Alur CRUD
+## Arsitektur
 
-1. **Read**
-   Menampilkan daftar produk dari Fakestore API menggunakan Axios.
+Proyek ini menggunakan pola **Container / Presentational**:
 
-2. **Create**
-   Menambahkan produk baru melalui form input.
+```
+useProducts          → fetch + CRUD
+useProductFilter     → search, filter category & rating, pagination
+ProductContainer     → state UI (modal open/close, selected product)
+ProductTable         → presentational, hanya terima props & tampilkan UI
+```
 
-3. **Update**
-   Mengedit produk yang sudah ada melalui form.
+Semua logic data dan filter dikelola di custom hooks, sehingga container dan komponen tetap ramping.
 
-4. **Delete**
-   Menghapus produk dari daftar.
+---
 
-> Fakestore API bersifat **fake API**, sehingga perubahan data tidak tersimpan permanen dan dikelola melalui state lokal React.
+## Fitur
+
+- Menampilkan daftar produk dari FakeStore API
+- Search produk berdasarkan nama & kategori
+- Filter berdasarkan kategori dan rating
+- Pagination 10 item per halaman
+- Tambah produk baru (Add)
+- Edit produk yang sudah ada
+- Hapus produk dengan konfirmasi toast
+- Toast notifikasi untuk setiap aksi CRUD
+
+---
+
+## Cara Menjalankan
+
+```bash
+# Install dependencies
+npm install
+
+# Jalankan dev server
+npm run dev
+
+# Build untuk production
+npm run build
+```
+
+Dev server berjalan di `http://localhost:5173` secara default.
+
+---
+
+## Custom Hooks
+
+### `useProducts`
+
+Mengelola fetch data dan operasi CRUD.
+
+```js
+const { products, handleCreate, handleUpdate, handleDelete } = useProducts();
+```
+
+| Return          | Tipe       | Deskripsi                          |
+|-----------------|------------|------------------------------------|
+| `products`      | `array`    | Semua produk dari API              |
+| `handleCreate`  | `function` | Tambah produk baru                 |
+| `handleUpdate`  | `function` | Update produk berdasarkan id       |
+| `handleDelete`  | `function` | Hapus produk berdasarkan id        |
+
+---
+
+### `useProductFilter`
+
+Mengelola filter dan pagination. Menerima `products` dari `useProducts`.
+
+```js
+const {
+  paginatedProducts,
+  filteredProducts,
+  categories,
+  search,
+  selectedCategory,
+  selectedRating,
+  currentPage,
+  totalPages,
+  setSearch,
+  setSelectedCategory,
+  setSelectedRating,
+  goToNextPage,
+  goToPrevPage,
+} = useProductFilter(products);
+```
+
+| Return               | Tipe       | Deskripsi                                  |
+|----------------------|------------|--------------------------------------------|
+| `paginatedProducts`  | `array`    | Produk di halaman aktif (maks 10 item)     |
+| `filteredProducts`   | `array`    | Semua produk hasil filter (sebelum paginate) |
+| `categories`         | `array`    | Daftar kategori unik                       |
+| `currentPage`        | `number`   | Halaman aktif                              |
+| `totalPages`         | `number`   | Total halaman                              |
+| `goToNextPage`       | `function` | Ke halaman berikutnya                      |
+| `goToPrevPage`       | `function` | Ke halaman sebelumnya                      |
+
+---
+
+## Catatan
+
+FakeStore API bersifat *fake* — operasi POST/PUT/DELETE tidak benar-benar menyimpan data ke server. Perubahan hanya tercermin di state lokal selama sesi berlangsung.
