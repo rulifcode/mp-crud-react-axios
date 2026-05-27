@@ -1,123 +1,90 @@
-import { useEffect, useState } from "react"; // hook react
+import { useState } from "react";
+import { toast, Toaster } from "sonner";
 
-// fungsi API (axios)
-import {
-  getProducts,
-  addProduct,
-  updateProduct,
-  deleteProduct,
-} from "../api/productApi";
+import { useProducts } from "../hooks/useProducts";
+import { useProductFilter } from "../hooks/useProductFilter";
 
-// komponen UI (presentational)
 import ProductTable from "../components/ProductTable";
 import ProductFormModal from "../components/ProductFormModal";
 import ProductViewModal from "../components/ProductViewModal";
 
 export default function ProductContainer() {
-  // simpan semua product
-  const [products, setProducts] = useState([]);
+  const { products, handleCreate, handleUpdate, handleDelete } = useProducts();
 
-  // simpan input search
-  const [search, setSearch] = useState("");
+  const {
+    paginatedProducts,   // produk yang ditampilkan di halaman aktif
+    filteredProducts,    // semua produk hasil filter (untuk totalCount)
+    categories,
+    search,
+    selectedCategory,
+    selectedRating,
+    currentPage,
+    totalPages,
+    setSearch,
+    setSelectedCategory,
+    setSelectedRating,
+    goToNextPage,
+    goToPrevPage,
+  } = useProductFilter(products);
 
-  // kontrol modal form (add / edit)
+  // State UI: kontrol buka/tutup modal form (add / edit)
   const [formOpen, setFormOpen] = useState(false);
 
-  // kontrol modal view
+  // State UI: kontrol buka/tutup modal view
   const [viewOpen, setViewOpen] = useState(false);
 
-  // product yang sedang dipilih
+  // Produk yang sedang dipilih — dipakai oleh modal form (edit) dan modal view
   const [selected, setSelected] = useState(null);
 
-  // ambil data product saat pertama render
-  useEffect(() => {
-    const load = async () => {
-      const res = await getProducts(); // fetch ke API
-      setProducts(res.data);           // simpan ke state
-    };
+  // Handler Delete — pakai toast konfirmasi sebelum benar-benar menghapus
+  const onDelete = (id) => {
+    const product = products.find((p) => p.id === id);
+    const name =
+      product?.title?.slice(0, 30) + (product?.title?.length > 30 ? "…" : "");
 
-    load();
-  }, []);
-
-  // tambah product baru
-  const handleCreate = async (data) => {
-    const res = await addProduct(data); // kirim ke API
-
-    // karena fakestore API fake, update manual di state
-    setProducts((prev) => [
-      { ...res.data, id: Date.now() }, // id sementara
-      ...prev,
-    ]);
-
-    setFormOpen(false); // tutup modal
+    toast(`Hapus "${name}"?`, {
+      description: "Tindakan ini tidak bisa dibatalkan.",
+      duration: 5000,
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          try {
+            await handleDelete(id);
+            toast.success("Produk berhasil dihapus.");
+          } catch {
+            toast.error("Gagal menghapus produk. Coba lagi.");
+          }
+        },
+      },
+      cancel: { label: "Cancel" },
+    });
   };
-
-  // update product
-  const handleUpdate = async (data) => {
-    await updateProduct(selected.id, data); // update ke API
-
-    // update data di state
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === selected.id
-          ? { ...p, ...data } // data diganti
-          : p
-      )
-    );
-
-    setSelected(null);
-    setFormOpen(false);
-  };
-
-  // hapus product
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this product?")) return;
-
-    await deleteProduct(id); // hapus di API
-
-    // hapus di state
-    setProducts((prev) =>
-      prev.filter((p) => p.id !== id)
-    );
-  };
-
-  // filter product berdasarkan search (title + category)
-  const filteredProducts = products.filter((p) => {
-    const text = `${p.title} ${p.category}`.toLowerCase();
-    return text.includes(search.toLowerCase());
-  });
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      {/* header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">CRUD Product</h1>
+      <Toaster
+        position="top-center"
+        toastOptions={{ classNames: { toast: "font-sans text-sm" } }}
+      />
 
-        <button
-          onClick={() => {
-            setSelected(null); // mode add
-            setFormOpen(true); // buka modal
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Tambah Product
-        </button>
-      </div>
-
-      {/* input search */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Cari Product?"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full md:w-1/3 border px-3 py-2 rounded"
-        />
-      </div>
-
-      {/* tabel product */}
       <ProductTable
-        products={filteredProducts}
+        products={paginatedProducts}
+        totalCount={filteredProducts.length}
+        categories={categories}
+        search={search}
+        selectedCategory={selectedCategory}
+        selectedRating={selectedRating}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onSearch={setSearch}
+        onCategory={setSelectedCategory}
+        onRating={setSelectedRating}
+        onPrev={goToPrevPage}
+        onNext={goToNextPage}
+        onAdd={() => {
+          setSelected(null);
+          setFormOpen(true);
+        }}
         onView={(p) => {
           setSelected(p);
           setViewOpen(true);
@@ -126,10 +93,9 @@ export default function ProductContainer() {
           setSelected(p);
           setFormOpen(true);
         }}
-        onDelete={handleDelete}
+        onDelete={onDelete}
       />
 
-      {/* modal form */}
       {formOpen && (
         <ProductFormModal
           selected={selected}
@@ -137,15 +103,24 @@ export default function ProductContainer() {
             setSelected(null);
             setFormOpen(false);
           }}
-          onSubmit={(data) =>
-            selected
-              ? handleUpdate(data) // edit
-              : handleCreate(data) // add
-          }
+          onSubmit={async (data) => {
+            try {
+              if (selected) {
+                await handleUpdate(selected.id, data);
+                toast.success("Produk berhasil diperbarui.");
+              } else {
+                await handleCreate(data);
+                toast.success("Produk berhasil ditambahkan.");
+              }
+              setSelected(null);
+              setFormOpen(false);
+            } catch {
+              toast.error("Terjadi kesalahan. Coba lagi.");
+            }
+          }}
         />
       )}
 
-      {/* modal view */}
       {viewOpen && selected && (
         <ProductViewModal
           product={selected}
